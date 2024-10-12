@@ -104,7 +104,7 @@ function cmake.generate(opt, callback)
       if not config.configure_preset then
         -- this will also set value for build type from preset.
         -- default to be "Debug"
-        cmake.select_configure_preset(function()
+        cmake.select_configure_preset({}, function()
           cmake.generate(opt, callback)
         end)
       end
@@ -654,7 +654,7 @@ function cmake.select_kit(callback)
   end
 end
 
-function cmake.select_configure_preset(callback)
+function cmake.select_configure_preset(opt, callback)
   if utils.has_active_job(config.runner, config.executor) then
     return
   end
@@ -686,10 +686,21 @@ function cmake.select_configure_preset(callback)
         cmake.generate({ bang = false, fargs = {} }, nil)
       end
     end
+    local prompt
+    if opt.fargs ~= nil and opt.fargs[1] ~= nil then
+      if utils.in_array(configure_preset_names, opt.fargs[1]) then
+        vim.schedule_wrap(on_choice)(opt.fargs[1])
+        return
+      else
+        prompt = "Invalid configure preset \"".. opt.fargs[1] .. "\". Select preset"
+      end
+    else
+      prompt = "Select cmake configure presets"
+    end
     vim.ui.select(
       configure_preset_names,
       {
-        prompt = "Select cmake configure presets",
+        prompt = prompt,
         format_item = format_preset_name,
       },
       vim.schedule_wrap(on_choice)
@@ -699,7 +710,7 @@ function cmake.select_configure_preset(callback)
   end
 end
 
-function cmake.select_build_preset(callback)
+function cmake.select_build_preset(opt, callback)
   if utils.has_active_job(config.runner, config.executor) then
     return
   end
@@ -752,6 +763,17 @@ function cmake.select_build_preset(callback)
       elseif configure_preset_updated then
         cmake.generate({ bang = true, fargs = {} }, nil)
       end
+    end
+    local prompt
+    if opt.fargs ~= nil and opt.fargs[1] ~= nil then
+      if utils.in_array(build_preset_names, opt.fargs[1]) then
+        vim.schedule_wrap(on_choice)(opt.fargs[1])
+        return
+      else
+        prompt = "Invalid build preset \"".. opt.fargs[1] .. "\". Select preset"
+      end
+    else
+      prompt = "Select cmake build presets"
     end
     vim.ui.select(
       build_preset_names,
