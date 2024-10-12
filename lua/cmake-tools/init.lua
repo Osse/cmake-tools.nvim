@@ -672,26 +672,27 @@ function cmake.select_configure_preset(callback)
       local p = presets:get_configure_preset(p_name)
       return p.displayName or p.name
     end
+    local on_choice = function(choice)
+      if not choice then
+        return
+      end
+      if config.configure_preset ~= choice then
+        config.configure_preset = choice
+        config.build_type = presets:get_configure_preset(choice):get_build_type()
+      end
+      if type(callback) == "function" then
+        callback()
+      else
+        cmake.generate({ bang = false, fargs = {} }, nil)
+      end
+    end
     vim.ui.select(
       configure_preset_names,
       {
         prompt = "Select cmake configure presets",
         format_item = format_preset_name,
       },
-      vim.schedule_wrap(function(choice)
-        if not choice then
-          return
-        end
-        if config.configure_preset ~= choice then
-          config.configure_preset = choice
-          config.build_type = presets:get_configure_preset(choice):get_build_type()
-        end
-        if type(callback) == "function" then
-          callback()
-        else
-          cmake.generate({ bang = false, fargs = {} }, nil)
-        end
-      end)
+      vim.schedule_wrap(on_choice)
     )
   else
     log.error("Cannot find CMake[User]Presets.json at Root (" .. config.cwd .. ") !!")
@@ -721,40 +722,41 @@ function cmake.select_build_preset(callback)
       local p = presets:get_build_preset(p_name)
       return p.displayName or p.name
     end
+    local on_choice = function(choice)
+      if not choice then
+        return
+      end
+      if choice == "None" then
+        config.build_preset = nil
+        return
+      end
+      if config.build_preset ~= choice then
+        config.build_preset = choice
+      end
+      local associated_configure_preset = presets:get_configure_preset(
+      presets:get_build_preset(choice).configurePreset,
+      { include_hidden = true }
+      )
+      local associated_configure_preset_name = associated_configure_preset
+      and associated_configure_preset.name
+      or nil
+      local configure_preset_updated = false
+
+      if config.configure_preset ~= associated_configure_preset_name then
+        config.configure_preset = associated_configure_preset_name
+        configure_preset_updated = true
+      end
+
+      if type(callback) == "function" then
+        callback()
+      elseif configure_preset_updated then
+        cmake.generate({ bang = true, fargs = {} }, nil)
+      end
+    end
     vim.ui.select(
       build_preset_names,
       { prompt = "Select cmake build presets", format_item = format_preset_name },
-      vim.schedule_wrap(function(choice)
-        if not choice then
-          return
-        end
-        if choice == "None" then
-          config.build_preset = nil
-          return
-        end
-        if config.build_preset ~= choice then
-          config.build_preset = choice
-        end
-        local associated_configure_preset = presets:get_configure_preset(
-          presets:get_build_preset(choice).configurePreset,
-          { include_hidden = true }
-        )
-        local associated_configure_preset_name = associated_configure_preset
-            and associated_configure_preset.name
-          or nil
-        local configure_preset_updated = false
-
-        if config.configure_preset ~= associated_configure_preset_name then
-          config.configure_preset = associated_configure_preset_name
-          configure_preset_updated = true
-        end
-
-        if type(callback) == "function" then
-          callback()
-        elseif configure_preset_updated then
-          cmake.generate({ bang = true, fargs = {} }, nil)
-        end
-      end)
+      vim.schedule_wrap(on_choice)
     )
   else
     log.error("Cannot find CMake[User]Presets.json at Root (" .. config.cwd .. ")!!")
