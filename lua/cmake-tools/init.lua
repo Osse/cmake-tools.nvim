@@ -104,7 +104,7 @@ function cmake.generate(opt, callback)
       if not config.configure_preset then
         -- this will also set value for build type from preset.
         -- default to be "Debug"
-        cmake.select_configure_preset(function()
+        cmake.select_configure_preset({}, function()
           cmake.generate(opt, callback)
         end)
       end
@@ -657,7 +657,7 @@ function cmake.select_kit(callback)
   end
 end
 
-function cmake.select_configure_preset(callback)
+function cmake.select_configure_preset(opt, callback)
   if utils.has_active_job(config.runner, config.executor) then
     return
   end
@@ -675,33 +675,45 @@ function cmake.select_configure_preset(callback)
       local p = presets:get_configure_preset(p_name)
       return p.displayName or p.name
     end
+    local on_choice = function(choice)
+      if not choice then
+        return
+      end
+      if config.configure_preset ~= choice then
+        config.configure_preset = choice
+        config.build_type = presets:get_configure_preset(choice):get_build_type()
+      end
+      if type(callback) == "function" then
+        callback()
+      else
+        cmake.generate({ bang = false, fargs = {} }, nil)
+      end
+    end
+    local prompt
+    if opt.fargs ~= nil and opt.fargs[1] ~= nil then
+      if utils.in_array(configure_preset_names, opt.fargs[1]) then
+        vim.schedule_wrap(on_choice)(opt.fargs[1])
+        return
+      else
+        prompt = "Invalid configure preset \"".. opt.fargs[1] .. "\". Select preset"
+      end
+    else
+      prompt = "Select cmake configure presets"
+    end
     vim.ui.select(
       configure_preset_names,
       {
-        prompt = "Select cmake configure presets",
+        prompt = prompt,
         format_item = format_preset_name,
       },
-      vim.schedule_wrap(function(choice)
-        if not choice then
-          return
-        end
-        if config.configure_preset ~= choice then
-          config.configure_preset = choice
-          config.build_type = presets:get_configure_preset(choice):get_build_type()
-        end
-        if type(callback) == "function" then
-          callback()
-        else
-          cmake.generate({ bang = false, fargs = {} }, nil)
-        end
-      end)
+      vim.schedule_wrap(on_choice)
     )
   else
     log.error("Cannot find CMake[User]Presets.json at Root (" .. config.cwd .. ") !!")
   end
 end
 
-function cmake.select_build_preset(callback)
+function cmake.select_build_preset(opt, callback)
   if utils.has_active_job(config.runner, config.executor) then
     return
   end
@@ -724,40 +736,52 @@ function cmake.select_build_preset(callback)
       local p = presets:get_build_preset(p_name)
       return p.displayName or p.name
     end
+    local on_choice = function(choice)
+      if not choice then
+        return
+      end
+      if choice == "None" then
+        config.build_preset = nil
+        return
+      end
+      if config.build_preset ~= choice then
+        config.build_preset = choice
+      end
+      local associated_configure_preset = presets:get_configure_preset(
+      presets:get_build_preset(choice).configurePreset,
+      { include_hidden = true }
+      )
+      local associated_configure_preset_name = associated_configure_preset
+      and associated_configure_preset.name
+      or nil
+      local configure_preset_updated = false
+
+      if config.configure_preset ~= associated_configure_preset_name then
+        config.configure_preset = associated_configure_preset_name
+        configure_preset_updated = true
+      end
+
+      if type(callback) == "function" then
+        callback()
+      elseif configure_preset_updated then
+        cmake.generate({ bang = true, fargs = {} }, nil)
+      end
+    end
+    local prompt
+    if opt.fargs ~= nil and opt.fargs[1] ~= nil then
+      if utils.in_array(build_preset_names, opt.fargs[1]) then
+        vim.schedule_wrap(on_choice)(opt.fargs[1])
+        return
+      else
+        prompt = "Invalid build preset \"".. opt.fargs[1] .. "\". Select preset"
+      end
+    else
+      prompt = "Select cmake build presets"
+    end
     vim.ui.select(
       build_preset_names,
       { prompt = "Select cmake build presets", format_item = format_preset_name },
-      vim.schedule_wrap(function(choice)
-        if not choice then
-          return
-        end
-        if choice == "None" then
-          config.build_preset = nil
-          return
-        end
-        if config.build_preset ~= choice then
-          config.build_preset = choice
-        end
-        local associated_configure_preset = presets:get_configure_preset(
-          presets:get_build_preset(choice).configurePreset,
-          { include_hidden = true }
-        )
-        local associated_configure_preset_name = associated_configure_preset
-            and associated_configure_preset.name
-          or nil
-        local configure_preset_updated = false
-
-        if config.configure_preset ~= associated_configure_preset_name then
-          config.configure_preset = associated_configure_preset_name
-          configure_preset_updated = true
-        end
-
-        if type(callback) == "function" then
-          callback()
-        elseif configure_preset_updated then
-          cmake.generate({ bang = true, fargs = {} }, nil)
-        end
-      end)
+      vim.schedule_wrap(on_choice)
     )
   else
     log.error("Cannot find CMake[User]Presets.json at Root (" .. config.cwd .. ")!!")
@@ -1235,6 +1259,7 @@ function cmake.select_cwd(cwd_path)
         config.cwd = vim.fn.resolve(input)
         cmake.register_autocmd()
         cmake.register_autocmd_provided_by_users()
+        cmake.register_scratch_buffer(config.executor.name, config.runner.name)
         --	end
         cmake.generate({ bang = false, fargs = {} }, nil)
       end)
@@ -1243,6 +1268,7 @@ function cmake.select_cwd(cwd_path)
     config.cwd = vim.fn.resolve(cwd_path.args)
     cmake.register_autocmd()
     cmake.register_autocmd_provided_by_users()
+    cmake.register_scratch_buffer(config.executor.name, config.runner.name)
     cmake.generate({ bang = false, fargs = {} }, nil)
   end
 end

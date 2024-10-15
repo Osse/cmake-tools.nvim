@@ -38,6 +38,16 @@ function utils.dump(o)
   end
 end
 
+function utils.in_array(array, str)
+  for _, value in ipairs(array) do
+    if value == str then
+      return true
+    end
+  end
+
+  return false
+end
+
 function utils.get_path(str, sep)
   sep = sep or (osys.iswin32 and "\\" or "/")
   return str:match("(.*" .. sep .. ")")
