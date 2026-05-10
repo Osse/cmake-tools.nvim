@@ -886,16 +886,8 @@ function cmake.select_build_target(regenerate, callback)
         return
       end
       config.build_target = targets[idx]
-      if config.sync_targets then
-        local launch_res = config:launch_targets()
-        if launch_res.code == Types.SUCCESS then
-          for _, lt in ipairs(launch_res.data.targets) do
-            if lt == targets[idx] then
-              config.launch_target = targets[idx]
-              break
-            end
-          end
-        end
+      if config.sync_targets and display_targets[idx] and display_targets[idx]:find("%(executable%)") then
+        config.launch_target = targets[idx]
       end
       callback(Result:new(Types.SUCCESS, config.build_target, nil))
     end)
