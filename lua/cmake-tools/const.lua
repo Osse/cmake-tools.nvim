@@ -134,6 +134,7 @@ local const = {
     refresh_rate_ms = 100, -- how often to iterate icons
   },
   cmake_virtual_text_support = true, -- Show the target related to current file using virtual text (at right corner)
+  cmake_sync_build_and_launch_targets = false, -- if true, selecting a build target also sets it as the launch target (when executable) and vice versa
 }
 
 return const

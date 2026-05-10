@@ -13,6 +13,7 @@ local Config = {
   variant = nil,
   build_target = nil,
   launch_target = nil,
+  sync_targets = false,
   kit = nil,
   configure_preset = nil,
   build_preset = nil,
@@ -46,6 +47,7 @@ function Config:new(const)
 
   obj.executor = const.cmake_executor
   obj.runner = const.cmake_runner
+  obj.sync_targets = const.cmake_sync_build_and_launch_targets
 
   return obj
 end
