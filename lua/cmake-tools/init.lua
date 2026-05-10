@@ -876,7 +876,8 @@ function cmake.select_build_target(regenerate, callback)
       end)
     end
   end
-  local targets, display_targets = targets_res.data.targets, targets_res.data.display_targets
+  local targets, display_targets, types =
+    targets_res.data.targets, targets_res.data.display_targets, targets_res.data.types
   vim.ui.select(
     display_targets,
     { prompt = "Select build target" },
@@ -886,7 +887,7 @@ function cmake.select_build_target(regenerate, callback)
         return
       end
       config.build_target = targets[idx]
-      if config.sync_targets and display_targets[idx] and display_targets[idx]:find("%(executable%)") then
+      if config.sync_targets and types[idx] == "executable" then
         config.launch_target = targets[idx]
       end
       callback(Result:new(Types.SUCCESS, config.build_target, nil))

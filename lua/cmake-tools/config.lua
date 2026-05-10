@@ -365,11 +365,12 @@ function Config:validate_for_debugging()
 end
 
 local function get_targets(config, opt)
-  local targets, display_targets, paths, abs_paths = {}, {}, {}, {}
+  local targets, display_targets, types, paths, abs_paths = {}, {}, {}, {}, {}
   local sources = {}
   if opt.has_all then
     table.insert(targets, "all")
     table.insert(display_targets, "all")
+    table.insert(types, nil)
   end
   local codemodel_targets = config:get_codemodel_targets()
   if codemodel_targets.code ~= Types.SUCCESS then
@@ -396,11 +397,13 @@ local function get_targets(config, opt)
         if target_name == config.build_target then
           table.insert(targets, 1, target_name)
           table.insert(display_targets, 1, display_name)
+          table.insert(types, 1, type)
           table.insert(paths, 1, path)
           table.insert(abs_paths, 1, abs_path)
         else
           table.insert(targets, target_name)
           table.insert(display_targets, display_name)
+          table.insert(types, type)
           table.insert(paths, path)
           table.insert(abs_paths, abs_path)
         end
@@ -421,6 +424,7 @@ local function get_targets(config, opt)
     return Result:new(Types.SUCCESS, {
       targets = targets,
       display_targets = display_targets,
+      types = types,
       paths = paths,
       abs_paths = abs_paths,
       sources = sources,
@@ -428,7 +432,7 @@ local function get_targets(config, opt)
   else
     return Result:new(
       Types.SUCCESS,
-      { targets = targets, display_targets = display_targets, paths = paths, abs_paths = abs_paths },
+      { targets = targets, display_targets = display_targets, types = types, paths = paths, abs_paths = abs_paths },
       "Success!"
     )
   end
