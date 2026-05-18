@@ -142,6 +142,7 @@ local const = {
   },
   cmake_virtual_text_support = true, -- Show the target related to current file using virtual text (at right corner)
   cmake_use_scratch_buffer = false, -- A buffer that shows what cmake-tools has done
+  cmake_sync_build_and_launch_targets = false, -- if true, selecting a build target also sets it as the launch target (when executable) and vice versa
 }
 
 local const_mt = {}

@@ -70,6 +70,7 @@ function Config:new(const)
 
   obj.executor = const.cmake_executor
   obj.runner = const.cmake_runner
+  obj.sync_targets = const.cmake_sync_build_and_launch_targets
 
   return obj
 end
